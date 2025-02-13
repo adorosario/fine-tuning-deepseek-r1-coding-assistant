@@ -1,0 +1,12 @@
+# REPOS
+git clone git@github.com:adorosario/wordpress-to-customgpt.git
+git clone git@github.com:adorosario/apify-customgpt.git
+git clone git@github.com:adorosario/customgpt-streamlit.git
+git clone git@github.com:Poll-The-People/customgpt-api-sdks.git
+git clone git@github.com:Poll-The-People/api-tools.git
+git clone git@github.com:Poll-The-People/customgpt-cookbook.git; git checkout feature/cli-utility
+
+# DOCUMENTATION
+https://docs.customgpt.ai/sitemap.xml
+https://customgpt.ai/page-sitemap.xml
+https://customgpt-streamlit.s3.amazonaws.com/customgpt-streamlit/62f9859a-0d19-4817-b620-15739544d482.xml
