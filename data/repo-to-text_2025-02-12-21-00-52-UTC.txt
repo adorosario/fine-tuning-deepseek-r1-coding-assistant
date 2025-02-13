@@ -1,0 +1,768 @@
+Directory: apify-customgpt
+
+Directory Structure:
+```
+.
+├── .gitignore
+├── DOCKER.md
+├── Dockerfile
+├── PLAN.txt
+├── README.md
+├── app.py
+├── env_sample.txt
+├── main.py
+├── requirements.txt
+└── screenshot.png
+```
+
+Contents of DOCKER.md:
+```
+# Docker Guide for apify-customgpt
+
+This guide provides instructions on how to build and run the Docker container for the apify-customgpt project locally.
+
+## Prerequisites
+
+- Docker installed on your local machine
+- Git installed
+
+## Building and Running Locally
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/adorosario/apify-customgpt.git
+   cd apify-customgpt
+   ```
+
+2. Set up your environment variables:
+   Create a `.env` file in the root directory of the project with the following content:
+   ```
+   APIFY_API_TOKEN=your_apify_token
+   CUSTOMGPT_API_KEY=your_customgpt_key
+   ```
+   Replace [APIFY_API_TOKEN](https://console.apify.com/account#/integrations) and [CUSTOMGPT_API_KEY](https://app.customgpt.ai/profile#api) with your actual API tokens.
+
+3. Build the Docker image:
+   ```
+   docker build -t apify-customgpt .
+   ```
+
+4. Run the container locally:
+   ```
+   docker run -it -p 8501:8501 --rm -v $(pwd):/app apify-customgpt
+   ```
+
+5. You will be dropped into a bash prompt inside the container. From here, you can run your Python script:
+   ```
+   python main.py --starting-url https://docs.apify.com/api/v2 --prompt "How to find the API token?"
+   ```
+
+## Troubleshooting
+
+- If you encounter any issues with running the script inside the Docker container, make sure your `.env` file is correctly set up and placed in the project root directory.
+- If you need to install additional packages, you can do so using `pip` inside the container, or add them to the `requirements.txt` file and rebuild the image.
+
+## Additional Notes
+
+- Remember to update your `requirements.txt` file if you add any new dependencies to your project.
+- The current Dockerfile is set up for local development and drops you into a bash prompt. This allows for interactive development and debugging.
+- Never commit your `.env` file to the repository, as it contains sensitive information. Make sure it's listed in your `.gitignore` file.
+
+For more information on using Docker for Python development, refer to the [official Docker documentation](https://docs.docker.com/language/python/).
+```
+
+Contents of Dockerfile:
+```
+# Use an official Python runtime as the base image
+FROM python:3.9-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Run main.py when the container launches
+CMD ["bash"]
+```
+
+Contents of PLAN.txt:
+```
+Fix code : **WAITING ON MAINTAINANCE**
+Fix README along lines of the blog post
+Add image to README
+Add Loom video.
+
+NICE TO HAVE: Streamlit app
+
+python main.py --starting-url https://docs.customgpt.ai --prompt "How do I start a streaming conversation from the API?"
+
+```
+
+Contents of README.md:
+```
+# Apify-CustomGPT Integration
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://apify-to-customgpt.streamlit.app/)
+
+A powerful tool to scrape web content using Apify and create AI agents with CustomGPT, enabling you to build intelligent chatbots based on web data. Now with a Streamlit interface for easier interaction!
+
+## Table of Contents
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Streamlit App](#streamlit-app)
+  - [Command Line Interface](#command-line-interface)
+- [Configuration](#configuration)
+- [Code Structure](#code-structure)
+- [Contributing](#contributing)
+- [License](#license)
+- [Support](#support)
+
+## Features
+
+- 🕷️ Web scraping using Apify's website content crawler
+- 🤖 AI agent creation with CustomGPT
+- 🔄 Automatic transfer of scraped data to CustomGPT
+- 📊 Indexing status monitoring
+- 💬 Immediate chat functionality with the created AI agent
+- 🖥️ User-friendly Streamlit interface
+
+![Project Screenshot](screenshot.png)
+
+## Demo Video
+
+[![Watch the video](https://cdn.loom.com/sessions/thumbnails/81de6b49b1cc495b8c764508faa38053-46614daa7d932146-full-play.gif)](https://www.loom.com/share/81de6b49b1cc495b8c764508faa38053)
+
+[Click here to watch the full demo video](https://www.loom.com/share/81de6b49b1cc495b8c764508faa38053)
+
+## How To Use It?
+We provide an easy to use [no-code hosted Streamlit app](https://apify-to-customgpt.streamlit.app/). You can also self-host the Streamlit app if you'd like.
+
+## Prerequisites
+
+Before you begin, ensure you have met the following requirements:
+
+- Python 3.7 or higher
+- An Apify account with API access
+- A CustomGPT account with API access
+
+## Installation
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/adorosario/apify-customgpt.git
+   cd apify-customgpt
+   ```
+
+2. Install the required dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+## Usage
+
+### Streamlit App
+
+1. Set up your environment variables by creating a `.env` file in the root directory:
+   ```
+   APIFY_API_TOKEN=your_apify_api_token
+   CUSTOMGPT_API_KEY=your_customgpt_api_key
+   ```
+
+2. Run the Streamlit app:
+   ```
+   streamlit run app.py
+   ```
+
+3. Open your web browser and go to the URL displayed in the terminal (usually `http://localhost:8501`).
+
+4. Use the web interface to enter the starting URL, and follow the on-screen instructions to scrape and transfer data.
+
+### Command Line Interface
+
+1. Set up your environment variables as described above.
+
+2. Run the script with the required arguments:
+   ```
+   python main.py --starting-url <URL> --prompt <prompt>
+   ```
+   Replace `<URL>` with the website you want to scrape and `<prompt>` with the initial question for your AI agent.
+
+3. Monitor the console output for progress updates and the final AI agent response.
+
+## Configuration
+
+### Apify Setup
+
+1. Sign up for an [Apify account](https://console.apify.com/).
+2. Navigate to your account settings.
+3. Find your API token in the Integrations section.
+4. Use this API token in your `.env` file.
+
+### CustomGPT Setup
+
+1. Log in to your [CustomGPT account](https://app.customgpt.ai/).
+2. Navigate to your profile settings.
+3. Find your API key in the API section.
+4. Use this API key in your `.env` file.
+
+## Code Structure
+
+- `main.py`: The main script that orchestrates the web scraping and AI agent creation process.
+- `app.py`: The Streamlit app script for the web interface.
+- `requirements.txt`: List of Python dependencies.
+- `.env`: File for storing environment variables (not included in the repository).
+
+## Contributing
+
+Contributions to the Apify-CustomGPT Integration project are welcome! Here's how you can contribute:
+
+1. Fork the repository.
+2. Create a new branch: `git checkout -b feature-branch-name`.
+3. Make your changes and commit them: `git commit -m 'Add some feature'`.
+4. Push to the branch: `git push origin feature-branch-name`.
+5. Create a pull request.
+
+Please ensure your code adheres to the project's coding standards and include tests for new features.
+
+## License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+
+## Support
+
+If you encounter any problems or have any questions, please open an issue in the GitHub repository or contact the maintainers directly.
+
+---
+
+Made with ❤️ by [adorosario](https://github.com/adorosario)
+```
+
+Contents of app.py:
+```
+import streamlit as st
+import os
+import time
+from datetime import datetime
+from urllib.parse import urlparse
+import re
+
+from dotenv import load_dotenv
+from langchain_core.documents import Document
+from langchain_community.utilities import ApifyWrapper
+from customgpt_client import CustomGPT
+from customgpt_client.types import File
+from requests.exceptions import HTTPError
+
+# Load environment variables
+load_dotenv()
+
+def generate_project_name(wp_url):
+    domain = urlparse(wp_url).netloc
+    domain = re.sub(r'^www\.', '', domain)
+    timestamp = datetime.now().strftime("%Y%m%d:%H%M%S")
+    return f"{domain} - {timestamp}"
+
+def transfer_to_customgpt(project_name, docs, api_key):
+    CustomGPT.api_key = api_key
+    
+    project = CustomGPT.Project.create(project_name=project_name)
+    if project.status_code != 201:
+        st.error(f"Failed to create project. Status code: {project.status_code}")
+        return None
+    
+    project_id = project.parsed.data.id
+    
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    for idx, doc in enumerate(docs):
+        file_name = f"document_{idx}.doc"
+        file_content = doc.page_content
+        file_metadata = doc.metadata
+
+        file_obj = File(file_name=file_name, payload=file_content)
+        
+        add_source = CustomGPT.Source.create(project_id=project_id, file=file_obj)
+        if add_source.status_code != 201:
+            st.error(f"Failed to upload file {file_name}. Status code: {add_source.status_code}")
+            continue
+        
+        page_id = add_source.parsed.data.pages[0].id
+        update_metadata = CustomGPT.PageMetadata.update(
+            project_id, 
+            page_id, 
+            url=file_metadata["url"],
+            title=file_metadata["title"]
+        )
+        if update_metadata.status_code != 200:
+            st.error(f"Failed to update metadata for {file_name}. Status code: {update_metadata.status_code}")
+        
+        progress = (idx + 1) / len(docs)
+        progress_bar.progress(progress)
+        status_text.text(f"Transferring documents: {idx + 1}/{len(docs)}")
+    
+    status_text.text("Transfer complete!")
+    return project_id
+
+def check_indexing_status(project_id, api_key):
+    CustomGPT.api_key = api_key
+    page_n = 1
+    all_documents_indexed = False
+    
+    status_text = st.empty()
+    
+    while not all_documents_indexed:
+        documents_response = CustomGPT.Page.get(project_id=project_id, page=page_n)
+        if documents_response.status_code != 200:
+            st.error(f"Failed to retrieve documents. Status code: {documents_response.status_code}")
+            return False
+        
+        documents_data = documents_response.parsed.data.pages
+        documents = documents_data.data
+        
+        page_n_completed = True
+        for doc in documents:
+            if doc.index_status == "queued":
+                status_text.text(f"Indexing in progress... (Page {page_n})")
+                time.sleep(5)
+                page_n_completed = False
+                break
+        
+        if page_n_completed:
+            if documents_data.next_page_url:
+                page_n += 1
+            else:
+                all_documents_indexed = True 
+    
+    status_text.text("All documents indexed successfully!")
+    return True
+
+# Streamlit UI
+st.set_page_config(page_title="Apify Web Scraper to CustomGPT AI Agent Builder", layout="wide")
+
+st.title("Apify Web Scraper to CustomGPT AI Agent Builder")
+st.markdown("*Securely sync website content scraped from Apify to CustomGPT to build your AI Agent. [ [Github](https://github.com/adorosario/apify-customgpt) ]*")
+st.markdown("---")
+
+# Source Section
+st.header("Source: Apify")
+col1, col2= st.columns(2)
+
+with col1:
+    starting_url = st.text_input(
+        "Starting URL",
+        help="Enter the full URL of the website you want to scrape (e.g., https://www.example.com)"
+    )
+
+with col2:
+    apify_api_token = st.text_input(
+        "Apify API Token",
+        type="password",
+        help="Enter your Apify API token. You can find this in your Apify account settings."
+    )
+
+# Destination Section
+st.header("Destination: CustomGPT")
+customgpt_api_key = st.text_input(
+    "CustomGPT API Key",
+    type="password",
+    help="Enter your [CustomGPT API key](https://app.customgpt.ai/profile#api). You can find this in your CustomGPT account settings.")
+
+# Action Button
+if st.button("Fetch and Transfer Data", help="Click to start the data transfer process"):
+    if not starting_url or not apify_api_token or not customgpt_api_key:
+        st.error("Please fill in all required fields before proceeding.")
+    else:
+        # Set up Apify
+        os.environ["APIFY_API_TOKEN"] = apify_api_token
+        apify = ApifyWrapper()
+
+        # Scrape website content
+        st.info(f"Starting Apify actor to scrape: {starting_url} ...")
+        with st.spinner("Scraping website content..."):
+            loader = apify.call_actor(
+                actor_id="apify/website-content-crawler",
+                run_input={"startUrls": [{"url": starting_url}], "maxCrawlDepth": 20},
+                dataset_mapping_function=lambda item: Document(
+                    page_content=item["text"] or "",
+                    metadata={
+                        "url": item["url"],
+                        "title": item.get("metadata", {}).get("title", ""),
+                        "description": item.get("metadata", {}).get("description", "")[:197] + "..." if item.get("metadata", {}).get("description") else ""
+                    }
+                ),
+            )
+            docs = loader.load()
+
+        # Transfer to CustomGPT
+        total_documents = len(docs)
+        st.info(f"Beginning sync of {total_documents} documents to CustomGPT ...")
+        customgpt_project_name = generate_project_name(starting_url)
+        
+        with st.spinner("Transferring data to CustomGPT..."):
+            project_id = transfer_to_customgpt(customgpt_project_name, docs, customgpt_api_key)
+
+        if project_id:
+            st.info("Checking indexing status...")
+            with st.spinner("Checking indexing status..."):
+                indexing_successful = check_indexing_status(project_id, customgpt_api_key)
+            if indexing_successful:
+                st.markdown(f"""
+                ### :tada: Data Successfully Synced!
+                
+                Your Apify scraped content has been successfully transferred to CustomGPT and indexed.
+                
+                You can now query your data using the CustomGPT dashboard:
+                
+                **[Open CustomGPT Dashboard](https://app.customgpt.ai/projects/{project_id}/ask-me-anything)**
+                """)
+        else:
+            st.error("Failed to create CustomGPT project. Please check your inputs and try again.")
+
+```
+
+Contents of env_sample.txt:
+```
+APIFY_API_TOKEN=<your_apify_api_token>
+CUSTOMGPT_API_KEY=<your_customgpt_api_key>
+```
+
+Contents of main.py:
+```
+import json
+import os
+import time
+import argparse
+from urllib.parse import urlparse
+import re
+from datetime import datetime
+
+from dotenv import load_dotenv
+from langchain_core.documents import Document
+from langchain_community.utilities import ApifyWrapper
+from customgpt_client import CustomGPT
+from customgpt_client.types import File
+from requests.exceptions import HTTPError
+
+def generate_project_name(wp_url):
+    # Extract domain name from the URL
+    domain = urlparse(wp_url).netloc
+    
+    # Remove 'www.' if present
+    domain = re.sub(r'^www\.', '', domain)
+    
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y%m%d:%H%M%S")
+    
+    # Combine domain and timestamp
+    project_name = f"{domain} - {timestamp}"
+    
+    return project_name
+
+def transfer_to_customgpt(project_name, docs, api_key):
+    CustomGPT.api_key = api_key
+    
+    project = CustomGPT.Project.create(project_name=project_name)
+    if project.status_code != 201:
+        print(f"Failed to create project. Status code: {project.status_code}")
+        return None
+    
+    project_id = project.parsed.data.id
+    
+    for idx, doc in enumerate(docs):
+        file_name = f"document_{idx}.doc"
+        file_content = doc.page_content
+        file_metadata = doc.metadata
+
+        file_obj = File(file_name=file_name, payload=file_content)
+        
+        add_source = CustomGPT.Source.create(project_id=project_id, file=file_obj)
+        if add_source.status_code != 201:
+            print(f"Failed to upload file {file_name}. Status code: {add_source.status_code}")
+            continue
+        
+        page_id = add_source.parsed.data.pages[0].id
+        update_metadata = CustomGPT.PageMetadata.update(
+            project_id, 
+            page_id, 
+            url=file_metadata["url"],
+            title=file_metadata["title"]
+        )
+        if update_metadata.status_code != 200:
+            print(f"""Failed to update metadata for project_id={project_id}, page_id={page_id}, url={file_metadata["url"]}, title={file_metadata["title"]}. Status code: {update_metadata.status_code}. response={update_metadata}""")
+    
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data transferred to CustomGPT project: {project_name}")
+    return project_id
+
+def check_indexing_status(project_id, api_key):
+    CustomGPT.api_key = api_key
+    page_n = 1 # Pagination
+    all_documents_indexed = False
+    
+    while not all_documents_indexed:
+        documents_response = CustomGPT.Page.get(project_id=project_id, page=page_n)
+        if documents_response.status_code != 200:
+            print(f"Failed to retrieve documents. Status code: {documents_response.status_code}")
+            return False
+        
+        documents_data = documents_response.parsed.data.pages
+        documents = documents_data.data
+        
+        page_n_completed = True
+        for doc in documents:
+            if doc.index_status == "queued":
+                print(f"Documents queued in indexing queue -- sleeping 5 seconds ...")
+                time.sleep(5)
+                page_n_completed = False
+                break
+        
+        # At this point, all documents found in paginated responses until page_n have been indexed
+        if page_n_completed:
+            if documents_data.next_page_url:
+                page_n += 1
+            else:
+                all_documents_indexed = True 
+    
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] All documents indexed successfully ...")
+    return True
+
+def query_customgpt(project_id, prompt, api_key):
+    CustomGPT.api_key = api_key
+    
+    # Create a conversation before sending a message to the chatbot
+    project_conversation = CustomGPT.Conversation.create(
+        project_id=project_id, name="My First Conversation"
+    )
+
+    # Check if the conversation creation was successful
+    if project_conversation.status_code != 201:
+        raise HTTPError(
+            f"Failed to create conversation. Status code: {project_conversation.status_code}"
+        )
+
+    # Get the session id for the conversation
+    session_id = project_conversation.parsed.data.session_id
+
+    response = CustomGPT.Conversation.send(
+        project_id=project_id, session_id=session_id, prompt=prompt, stream=False
+    )
+
+    # Check if the conversation response was successful
+    if response.status_code != 200:
+        raise HTTPError(f"Failed to send prompt. Status code: {response.status_code}, response={response}")
+
+    # Format and display the result in a more readable way
+    print(f"""
+    user: {response.parsed.data.user_query}
+    assistant: {response.parsed.data.openai_response}
+    """)
+
+def main(starting_url, user_prompt):
+    # Load environment variables from .env file
+    load_dotenv()
+
+    # Create an instance of the ApifyWrapper class.
+    apify = ApifyWrapper(apify_api_token=os.getenv("APIFY_API_TOKEN"))
+
+    # Call actor to scrape the website content.
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting apify actor to scrape: {starting_url} ...")
+    loader = apify.call_actor(
+        actor_id="apify/website-content-crawler",
+        run_input={"startUrls": [{"url": starting_url}], "maxCrawlDepth": 20},
+        dataset_mapping_function=lambda item: Document(
+            page_content=item["text"] or "",
+            metadata={
+                "url": item["url"],
+                "title": item.get("metadata", {}).get("title", ""),
+                "description": item.get("metadata", {}).get("description", "")
+            }
+        ),
+    )
+
+    # Load the documents
+    docs = loader.load()
+
+    # Create the CustomGPT.ai project and upload all the documents to it. 
+    CUSTOMGPT_API_KEY = os.getenv("CUSTOMGPT_API_KEY")
+    total_documents = len(docs)
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Beginning sync of {total_documents} documents to CustomGPT ...")
+    customgpt_project_name = generate_project_name(starting_url)
+    project_id = transfer_to_customgpt(customgpt_project_name, docs, CUSTOMGPT_API_KEY)
+
+    if project_id:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] All documents uploaded. Checking CustomGPT indexing status ...")
+        indexing_successful = check_indexing_status(project_id, CUSTOMGPT_API_KEY)
+        if indexing_successful:
+            print(f"""[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ### :tada: Data Successfully Synced!
+            
+            Your Apify scraped content has been successfully synced to CustomGPT and indexed.
+            
+            You can now also chat with your data here: https://app.customgpt.ai/projects/{project_id}/ask-me-anything
+            """)
+    else:
+        print("No data fetched. Please check your inputs and try again.")
+
+    # Let's query the newly created CustomGPT project
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Trying the prompt via API ...")
+    query_customgpt(project_id=project_id, prompt=user_prompt, api_key=CUSTOMGPT_API_KEY)
+
+if __name__ == "__main__":
+    # Create an argument parser to accept --starting-url and --prompt arguments
+    parser = argparse.ArgumentParser(
+        description="Build an AI agent using Apify and CustomGPT"
+    )
+    parser.add_argument(
+        "--starting-url", required=True, help="The URL to start scraping"
+    )
+    parser.add_argument(
+        "--prompt", required=True, help="The prompt or question to send to the chatbot"
+    )
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Call the main function with the starting URL and prompt
+    main(args.starting_url, args.prompt)
+
+```
+
+Contents of requirements.txt:
+```
+aiohappyeyeballs==2.4.0
+aiohttp==3.10.5
+aiosignal==1.3.1
+annotated-types==0.7.0
+anyio==4.5.0
+apify_client==1.8.1
+apify_shared==1.1.2
+asgiref==3.8.1
+attrs==24.2.0
+backoff==2.2.1
+bcrypt==4.2.0
+build==1.2.2
+cachetools==5.5.0
+certifi==2024.8.30
+charset-normalizer==3.3.2
+chroma-hnswlib==0.7.6
+chromadb==0.5.7
+click==8.1.7
+colorama==0.4.6
+coloredlogs==15.0.1
+customgpt-client==1.2.5
+dataclasses-json==0.6.7
+Deprecated==1.2.14
+distro==1.9.0
+fastapi==0.115.0
+filelock==3.16.1
+flatbuffers==24.3.25
+frozenlist==1.4.1
+fsspec==2024.9.0
+google-auth==2.35.0
+googleapis-common-protos==1.65.0
+greenlet==3.1.0
+grpcio==1.66.1
+h11==0.14.0
+httpcore==1.0.5
+httptools==0.6.1
+httpx==0.27.2
+huggingface-hub==0.25.0
+humanfriendly==10.0
+idna==3.10
+importlib_metadata==8.4.0
+importlib_resources==6.4.5
+jiter==0.5.0
+jsonpatch==1.33
+jsonpointer==3.0.0
+kubernetes==30.1.0
+langchain==0.3.0
+langchain-community==0.3.0
+langchain-core==0.3.2
+langchain-text-splitters==0.3.0
+langsmith==0.1.123
+markdown-it-py==3.0.0
+marshmallow==3.22.0
+mdurl==0.1.2
+mmh3==5.0.0
+monotonic==1.6
+more-itertools==10.5.0
+mpmath==1.3.0
+multidict==6.1.0
+mypy-extensions==1.0.0
+numpy==1.26.4
+oauthlib==3.2.2
+onnxruntime==1.19.2
+openai==1.46.1
+opentelemetry-api==1.27.0
+opentelemetry-exporter-otlp-proto-common==1.27.0
+opentelemetry-exporter-otlp-proto-grpc==1.27.0
+opentelemetry-instrumentation==0.48b0
+opentelemetry-instrumentation-asgi==0.48b0
+opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-proto==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-semantic-conventions==0.48b0
+opentelemetry-util-http==0.48b0
+orjson==3.10.7
+overrides==7.7.0
+packaging==24.1
+posthog==3.6.6
+protobuf==4.25.5
+pyasn1==0.6.1
+pyasn1_modules==0.4.1
+pydantic==2.9.2
+pydantic-settings==2.5.2
+pydantic_core==2.23.4
+Pygments==2.18.0
+PyPika==0.48.9
+pyproject_hooks==1.1.0
+pyreadline3==3.5.4
+python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
+PyYAML==6.0.2
+requests==2.32.3
+requests-oauthlib==2.0.0
+rich==13.8.1
+rsa==4.9
+shellingham==1.5.4
+six==1.16.0
+sniffio==1.3.1
+SQLAlchemy==2.0.35
+sseclient-py==1.7.2
+starlette==0.38.5
+sympy==1.13.3
+tenacity==8.5.0
+tokenizers==0.20.0
+tqdm==4.66.5
+typer==0.12.5
+typing-inspect==0.9.0
+typing_extensions==4.12.2
+urllib3==2.2.3
+uvicorn==0.30.6
+watchfiles==0.24.0
+websocket-client==1.8.0
+websockets==13.0.1
+wrapt==1.16.0
+yarl==1.11.1
+zipp==3.20.2
+streamlit
+
+```
+
+Contents of screenshot.png:
+```
+[Could not decode file contents]
+
+```
+

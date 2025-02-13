@@ -1,0 +1,255 @@
+Directory: customgpt-streamlit
+
+Directory Structure:
+```
+.
+├── .gitignore
+├── README.md
+├── requirements.txt
+└── streamlitAndCustomGpt.py
+```
+
+Contents of README.md:
+```
+This demo Streamlit app is designed to interface with the [CustomGPT API](https://docs.customgpt.ai/reference/i-api-homepage), providing a user-friendly custom GPT chatbot experience. It allows users to interact with various custom GPT agents on your CustomGPT account, manage conversations, and view citations from the chatbot responses.
+
+## About CustomGPT
+[CustomGPT.ai](https://customgpt.ai/) is a no-code/low-code SaaS platform to create custom GPT RAG agents with your own content. With just a few lines of code, developers can create sophisticated RAG agents with their own documents and websites, helpdesks, videos, audios, etc. This saves developers the burden of building their own RAG pipeline. And instantly get the benefit of data integrations, anti-hallucination, citations, analytics and [industry-best query relevancy](https://medium.com/towards-artificial-intelligence/build-it-or-buy-it-deployment-options-for-retrieval-augmented-generation-rag-f6d43df8212a). 
+
+## Live Demo
+If you have your own CustomGPT API key and projects, you can test the experience on the live app: 
+https://customgpt-demo-app.streamlit.app/
+
+## Features In This Demo
+- Project selection from available CustomGPT projects
+- Real-time chatbot interaction WITH streaming
+- Conversations with history
+- Clearing of chat history
+- Citation viewing for chatbot responses
+- RAG Agent with anti-hallucination.
+
+## Requirements
+- Streamlit
+- customgpt_client
+
+## Installation
+
+1. **Clone the Repository**: First, clone this repository to your local machine.
+
+2. **Install Dependencies**: Run the following command to install the required Python packages.
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Usage
+
+1. **Start the App**: Run the Streamlit app with the following command.
+   ```bash
+   streamlit run streamlitAndCustomGpt.py
+   ```
+
+2. **Enter CustomGPT API Key**: On the app's sidebar, input your CustomGPT API Key in the provided text field.
+
+3. **Select a Project**: After entering the API Key, you will be able to select a project from your available CustomGPT projects.
+
+4. **Chat with the Bot**: Use the chat input to start a conversation with the chatbot. The responses will include citations where applicable.
+
+5. **Reset Chat**: You can reset the chat history at any time using the 'Reset Chat' button.
+
+## Functionality
+
+### Utilities
+- `get_citations`: Fetches citation data from a given citation ID.
+- `query_chatbot`: Sends a user's message to the CustomGPT chatbot and receives the response.
+- `get_projectList`: Retrieves a list of available projects from CustomGPT.
+- `clear_chat_history`: Clears the current chat history.
+
+### App Components
+- **API Key Input**: Secure text input for entering the CustomGPT API Key.
+- **Project Selection**: Dropdown to select a project for the chatbot conversation.
+- **Chat Interface**: Real-time chat interface for interacting with the CustomGPT chatbot.
+- **Reset Chat**: Button to reset the chat history.
+
+## Troubleshooting
+- **API Key Issues**: Ensure that your CustomGPT API Key is entered correctly.
+- **Connection Problems**: Check your internet connection if the app fails to connect to the CustomGPT API.
+- **Unknown Errors**: For unhandled errors or query logs, check your CustomGPT Dashboard for more details.
+
+## Support
+For support, please contact the repository owner or submit an issue on the GitHub repository page. You can also [contact CustomGPT](https://customgpt.ai/contact-us). 
+
+## Contributing
+Contributions to this project are welcome. Please fork the repository and submit a pull request with your proposed changes.
+
+```
+
+Contents of requirements.txt:
+```
+streamlit==1.29.0
+customgpt_client
+lxml==4.9.2
+
+```
+
+Contents of streamlitAndCustomGpt.py:
+```
+import streamlit as st
+import os
+import json
+import uuid
+from customgpt_client import CustomGPT
+
+# Function to retrieve citations using CustomGPT API
+def get_citations(api_token, project_id, citation_id):
+    CustomGPT.api_key = api_token
+
+    try:
+        response_citations = CustomGPT.Citation.get(project_id=project_id, citation_id=citation_id)
+        if response_citations.status_code == 200:
+            try:
+                citation = response_citations.parsed.data
+                if citation.url is not None:
+                    source = {'title': citation.title, 'url': citation.url}
+                else:
+                    source = {'title': 'source', 'url': ""}
+            except:
+                if citation.page_url is not None:
+                    source = {'title': citation.title, 'url': citation.page_url}
+                else:
+                    source = {'title': 'source', 'url': ""}
+            
+            return source
+        else:
+            return []
+    except Exception as e:
+        print(f"error::{e}")
+
+# Function to query the chatbot using CustomGPT API
+def query_chatbot(api_token, project_id, session_id, message, stream=True, lang='en'):
+    CustomGPT.api_key = api_token
+    try:
+        stream_response = CustomGPT.Conversation.send(project_id=project_id, session_id=session_id, prompt=message, stream=stream, lang=lang)
+        return stream_response
+    except Exception as e:
+        return [f"Error:: {e}"]
+
+# Function to get the list of projects using CustomGPT API
+def get_projectList(api_token):
+    CustomGPT.api_key = api_token
+    try:
+        projects = CustomGPT.Project.list()
+        if projects.status_code == 200:
+            return projects.parsed.data.data
+        else:
+            return []
+    except Exception as e:
+        print(f"error:get_projectList:: {e}")
+
+# Function to clear chat history
+def clear_chat_history():
+    st.session_state.session_id = str(uuid.uuid4())
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+
+# App title
+st.set_page_config(page_title="CustomGPT Chatbot")
+
+# Check if session_id is not in session_state, initialize it
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+# CustomGPT Credentials
+with st.sidebar:
+    st.title('CustomGPT Streamlit Demo')
+   
+    st.markdown("Don't have an API key? Get one [here](https://docs.customgpt.ai/reference/i-api-homepage).")
+    customgpt_api_key = st.text_input('Enter CustomGPT API Key:', type='password')
+    if customgpt_api_key:
+        st.subheader('Select Project')
+        listProject = get_projectList(customgpt_api_key)
+        
+        # Check if projects are available
+        if listProject is not None:
+            projectNames = [projt.project_name for projt in listProject]
+            selected_model = st.sidebar.selectbox('Select Model', projectNames, key='selected_model')
+            index = projectNames.index(selected_model)
+            selected_project = listProject[index]
+        else:
+            st.error('No projects found. Please check your API key.', icon='❌')
+        
+        # Button to reset chat
+        st.sidebar.button('Reset Chat', on_click=clear_chat_history)
+
+# Check if messages is not in session_state.keys(), initialize it
+if "messages" not in st.session_state.keys():
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+
+# Display or clear chat messages
+for index, message in enumerate(st.session_state.messages):
+    with st.chat_message(message["role"]):
+        # Display the message content
+        st.write(f"{message['content']}")
+
+# User-provided prompt
+if prompt := st.chat_input(disabled=not customgpt_api_key):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        # Display the user's message
+        st.write(prompt)
+
+# Generate a new response if the last message is not from the assistant
+if st.session_state.messages[-1]["role"] != "assistant":
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            client = query_chatbot(customgpt_api_key, selected_project['id'], st.session_state.session_id, prompt)
+            placeholder = st.empty()
+            full_response = ""
+            
+            for event in client.events():
+                print(event.data)
+                resp_data = eval(event.data.replace('null', 'None'))
+                
+                # Check different status types
+                if resp_data is not None:
+                    if resp_data.get('status') == 'error':
+                        full_response += resp_data.get('message', '')
+                        placeholder.markdown(full_response + "▌")
+
+                    if resp_data.get('status') == 'progress':
+                        full_response += resp_data.get('message', '')
+                        placeholder.markdown(full_response + "▌")
+
+                    if resp_data.get('status') == 'finish' and resp_data.get('citations') is not None:
+                        citation_ids = resp_data.get('citations', [])
+
+                        citation_links = []
+                        count = 1
+                        
+                        # Process citation links
+                        for citation_id in citation_ids:
+                            citation_obj = get_citations(customgpt_api_key, selected_project['id'], citation_id)
+                            url = citation_obj.get('url', '')
+                            title = citation_obj.get('title', '')
+                            
+                            if len(url) > 0:
+                                formatted_url = f"{count}. [{title or url}]({url})"
+                                count += 1
+                                citation_links.append(formatted_url)
+
+                        if citation_links:
+                            cita = "\n\nSources:\n"
+                            for link in citation_links:
+                                cita += f"{link}\n"
+                            full_response += cita
+                            placeholder.markdown(full_response + "▌")
+                           
+            placeholder.markdown(full_response)
+            
+    if full_response == "":
+        full_response = "Oh no! Any unknown error has occurred. Please check your CustomGPT Dashboard for details."
+        placeholder.markdown(full_response)
+    
+    message = {"role": "assistant", "content": full_response}
+    st.session_state.messages.append(message)
+
+```
+

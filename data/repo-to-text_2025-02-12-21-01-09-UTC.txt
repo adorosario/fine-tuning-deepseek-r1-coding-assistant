@@ -1,0 +1,705 @@
+Directory: api-tools
+
+Directory Structure:
+```
+.
+.
+├── ./.git
+│   ├── ./.git/HEAD
+│   ├── ./.git/config
+│   ├── ./.git/description
+│   ├── ./.git/hooks
+│   │   ├── ./.git/hooks/applypatch-msg.sample
+│   │   ├── ./.git/hooks/commit-msg.sample
+│   │   ├── ./.git/hooks/fsmonitor-watchman.sample
+│   │   ├── ./.git/hooks/post-update.sample
+│   │   ├── ./.git/hooks/pre-applypatch.sample
+│   │   ├── ./.git/hooks/pre-commit.sample
+│   │   ├── ./.git/hooks/pre-merge-commit.sample
+│   │   ├── ./.git/hooks/pre-push.sample
+│   │   ├── ./.git/hooks/pre-rebase.sample
+│   │   ├── ./.git/hooks/pre-receive.sample
+│   │   ├── ./.git/hooks/prepare-commit-msg.sample
+│   │   ├── ./.git/hooks/push-to-checkout.sample
+│   │   └── ./.git/hooks/update.sample
+│   ├── ./.git/index
+│   ├── ./.git/info
+│   │   └── ./.git/info/exclude
+│   ├── ./.git/logs
+│   │   ├── ./.git/logs/HEAD
+│   │       ├── ./.git/logs/refs/heads
+│   │       │   └── ./.git/logs/refs/heads/main
+│   │           └── ./.git/logs/refs/remotes/origin
+│   │               └── ./.git/logs/refs/remotes/origin/HEAD
+│   │   └── ./.git/objects/pack
+│   │       ├── ./.git/objects/pack/pack-a4610c989782b0baca20be7f464a8dc0e7ae9426.idx
+│   │       └── ./.git/objects/pack/pack-a4610c989782b0baca20be7f464a8dc0e7ae9426.pack
+│   ├── ./.git/packed-refs
+│       ├── ./.git/refs/heads
+│       │   └── ./.git/refs/heads/main
+│       │   └── ./.git/refs/remotes/origin
+│       │       └── ./.git/refs/remotes/origin/HEAD
+├── ./README.md
+├── ./conversations
+│   ├── ./conversations/convo_clearer.py
+│   └── ./conversations/streamer.py
+├── ./projects
+│   ├── ./projects/deleter.py
+│   ├── ./projects/page_deleter.py
+│   ├── ./projects/project_lister.py
+│   ├── ./projects/project_settings.py
+│   ├── ./projects/quota.py
+│   ├── ./projects/source_deleter.py
+│   └── ./projects/user_count.py
+└── ./testing scripts
+    ├── ./testing scripts/harness.py
+    └── ./testing scripts/test_endpoints.py
+```
+
+Contents of README.md:
+```
+# Welcome to CustomGPT's API Tools Page
+Here you will find working examples of how to use our API in dynamic scripts beyond simple functions. 
+These can be used as food for thought on how to start using our API in your own environment or these examples can be utilized directly.
+
+Please also check out the rest of our examples in our cookbook:
+https://github.com/Poll-The-People/customgpt-cookbook
+
+## Projects
+- This section details functionality relating to the Project object
+
+## Conversations
+- This section details functionality relating to the Conversation object
+
+## Testing Scripts
+- The scripts in this section revolve around testing the functionality of CustomGPT processes and endpoints
+
+```
+
+Contents of conversations/convo_clearer.py:
+```
+import requests
+import time
+
+# Fetch all conversations for a given project ID
+def list_conversations(api_key, project_id):
+    """ Fetch all conversations for a given project ID and return their session IDs. """
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/conversations"
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        try:
+            # Access the nested 'data' key inside the outer 'data' dictionary
+            conversations = data['data']['data']  # First 'data' is for the response, second 'data' is the list
+            return [conv['session_id'] for conv in conversations]
+        except KeyError:
+            print("KeyError: One of the expected keys is not in the response.")
+            return []
+        except TypeError:
+            print("TypeError: There was a type issue with the response processing, check data structure.")
+            return []
+    else:
+        print(f"Failed to list conversations: {response.status_code}, {response.text}")
+        return []
+
+# Delete a single conversation
+def delete_conversation(api_key, project_id, session_id):
+    """ Delete a specific conversation by session ID within a project. """
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/conversations/{session_id}"
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+    response = requests.delete(url, headers=headers)
+    if response.status_code == 200:
+        print(f"Deleted conversation with session ID {session_id} successfully.")
+    elif response.status_code == 429:
+        print(f"Failed to delete conversation with ID {session_id} due to rate limits. Retrying...")
+        time.sleep(10)  # Adjust the sleep time if necessary
+        delete_conversation(api_key, project_id, session_id)  # Retry deleting the same page
+    else:
+        print(f"Failed to delete conversation with session ID {session_id}: {response.text}")
+
+# Loop and delete all conversations
+def delete_all_conversations(api_key, project_id):
+    """ Delete all conversations for a given project ID. """
+    session_ids = list_conversations(api_key, project_id)
+    for session_id in session_ids:
+        delete_conversation(api_key, project_id, session_id)
+        time.sleep(1)  # Sleep for 1 second between each deletion. Adjust as needed for subscription tier.
+        #Customer Tier Rate Limits:
+        #Basic: 60 per minute
+        #Standard: 90 per minute
+        #Premium: 120 per minute
+
+
+def main():
+    api_key = input("Enter your API Key:")  # Prompt user for the API key
+    project_id = input("Enter the project ID: ")  # Prompt user for the project ID
+    delete_all_conversations(api_key, project_id)
+
+if __name__ == "__main__":
+    main()
+
+```
+
+Contents of conversations/streamer.py:
+```
+import requests
+import json
+from sseclient import SSEClient
+
+def main():
+    # Setup API URL and API Token
+    api_endpoint = 'https://app.customgpt.ai/api/v1/'
+    api_token = input('Please enter your API token: ')
+    project_id = input('Please enter the project ID: ')
+
+    headers = {
+        'Content-type': 'application/json',
+        'Authorization': 'Bearer ' + api_token,
+        'Accept': 'text/event-stream'
+    }
+
+    # Fetch project info
+    url = f"{api_endpoint}projects/{project_id}"
+    response = requests.get(url, headers={"Authorization": f"Bearer {api_token}", "accept": "application/json"})
+    print("Project Information Response:")
+    print(response.text)
+    
+    # Create a conversation
+    name = input("Enter a name for the conversation: ")
+    payload = json.dumps({
+        "name": name
+    })
+
+    url = f"{api_endpoint}projects/{project_id}/conversations"
+    response = requests.post(url, headers=headers, data=payload)
+    print("Conversation Creation Response:")
+    print(response.text)
+    conversation_data = json.loads(response.text)["data"]
+    session_id = conversation_data["session_id"]
+
+    # Engage in a continuous conversation
+    while True:
+        prompt = input("Enter your prompt (or type 'exit' to end): ")
+        if prompt.lower() == 'exit':
+            print("Exiting conversation.")
+            break
+        
+        stream = 1
+        payload = json.dumps({
+            "prompt": prompt,
+            "stream": stream
+        })
+
+        url = f"{api_endpoint}projects/{project_id}/conversations/{session_id}/messages"
+        stream_response = requests.post(url, headers=headers, data=payload, stream=True)
+        client = SSEClient(stream_response)
+        print("Streaming Responses:")
+        for event in client.events():
+            print(event.data)
+            if json.loads(event.data).get("status") == "finish":
+                client.close()
+                break
+
+if __name__ == "__main__":
+    main()
+
+```
+
+Contents of projects/deleter.py:
+```
+import requests
+import time
+
+def get_all_projects(api_key):
+    """ Fetch all projects with pagination and return their IDs. """
+    api_endpoint = 'https://app.customgpt.ai/api/v1/projects'
+    headers = {
+        "Content-type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    project_ids = []
+    page = 1
+    while True:
+        response = requests.get(api_endpoint, headers=headers, params={"page": page})
+        if response.status_code == 200:
+            data = response.json()
+            projects = data['data']['data']
+            if projects:
+                project_ids.extend([project['id'] for project in projects])
+                page += 1  # move to the next page if the current page is not empty
+                if not data['data']['next_page_url']:  # check if there is no next page
+                    break
+            else:
+                break
+        else:
+            print(f"Failed to fetch data: {response.status_code}")
+            break
+    return project_ids
+
+
+def delete_selected_projects(api_key, exclude_ids):
+    """ Delete all projects except those with IDs listed in exclude_ids. """
+    project_ids = get_all_projects(api_key)
+    api_endpoint = 'https://app.customgpt.ai/api/v1/projects/'
+    headers = {
+        "Content-type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    for project_id in project_ids:
+        if project_id not in exclude_ids:
+            response = requests.delete(f"{api_endpoint}{project_id}", headers=headers)
+            time.sleep(1)
+            # Sleep for 1 second between each deletion. Adjust as needed for subscription tier.
+            #Customer Tier Rate Limits:
+            #Basic: 60 per minute
+            #Standard: 90 per minute
+            #Premium: 120 per minute
+            if response.status_code == 200:
+                print(f"Project ID {project_id} deleted successfully.")
+            else:
+                print(f"Failed to delete project ID {project_id}: {response.text}")
+        else:
+            print(f"Skipping deletion for project ID {project_id} as it is in the exclude list.")
+
+def main(api_key):
+    # IDs to exclude from deletion
+    exclude_ids = [] #Add the project IDs you want to keep, separated by commas
+    delete_selected_projects(api_key, exclude_ids)
+
+if __name__ == "__main__":
+    api_key = input("Enter your API Key:")
+    main(api_key)
+```
+
+Contents of projects/page_deleter.py:
+```
+import requests
+import time
+
+def delete_page(api_key, project_id, page_id):
+    """ Delete a specific page by page ID within a project. """
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/pages/{page_id}"
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+    response = requests.delete(url, headers=headers)
+    if response.status_code == 200:
+        print(f"Deleted page with ID {page_id} successfully.")
+    elif response.status_code == 429:
+        print(f"Failed to delete page with ID {page_id} due to rate limits. Retrying...")
+        time.sleep(10)  # Adjust the sleep time if necessary
+        delete_page(api_key, project_id, page_id)  # Retry deleting the same page
+    else:
+        print(f"Failed to delete page with ID {page_id}: {response.status_code}, {response.text}")
+
+def delete_pages_containing_string(api_key, project_id, search_string):
+    """ Delete all pages that contain a specified string in their page URL. """
+    page_ids = list_pages(api_key, project_id)  # This should ideally return page details, not just IDs
+    for page in page_ids:
+        # Assuming the function now returns detailed data for each page
+        if search_string.lower() in page['page_url'].lower():
+            delete_page(api_key, project_id, page['id'])
+            time.sleep(1)  # Sleep to respect rate limits
+
+def list_pages(api_key, project_id):
+    """ Fetch all pages for a given project ID and return detailed information across all pages. """
+    page_number = 1
+    all_pages = []
+    while True:
+        url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/pages?page={page_number}&duration=90&order=desc"
+        headers = {
+            "accept": "application/json",
+            "authorization": f"Bearer {api_key}"
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            pages = data['data']['pages']['data']
+            all_pages.extend(pages)  # Now stores the entire page data
+            # Check if there's a next page
+            if data['data']['pages']['next_page_url'] is None:
+                break
+            else:
+                page_number += 1
+        else:
+            print(f"Failed to list pages: {response.status_code}, {response.text}")
+            break
+    return all_pages
+
+def main():
+    api_key = input("Input your API key here: ")
+    project_id = input("Enter the project ID: ")
+    search_string = input("Delete all pages containing the following string: ")
+    delete_pages_containing_string(api_key, project_id, search_string)
+
+if __name__ == "__main__":
+    main()
+
+```
+
+Contents of projects/project_lister.py:
+```
+import requests
+
+def fetch_all_projects(base_url, api_key):
+    all_projects = []
+    page = 1
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+
+    while True:
+        url = f"{base_url}?page={page}&order=desc&orderBy=id&width=100%25&height=auto"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print("Failed to fetch data:", response.text)
+            break
+        
+        data = response.json()['data']
+        projects = data['data']
+        if not projects:
+            break  # Exit the loop if no projects are found on the current page
+
+        for project in projects:
+            project_info = {'id': project['id'], 'project_name': project['project_name']}
+            all_projects.append(project_info)
+
+        if data['next_page_url'] is None:
+            break  # Exit the loop if there is no next page
+
+        page += 1  # Increment to fetch the next page
+
+    return all_projects
+
+# Ask the user for the API key
+api_key = input("Please enter your API key: ")
+
+# URL setup
+url = "https://app.customgpt.ai/api/v1/projects"
+
+# Fetch all projects
+projects = fetch_all_projects(url, api_key)
+print(projects)
+```
+
+Contents of projects/project_settings.py:
+```
+import requests
+import json
+
+def update_settings():
+    # Prompt user for their API key and project ID
+    api_key = input("Enter your API key: ")
+    project_id = input("Enter your project ID: ")
+
+    # Set the API endpoint for the project settings
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/settings"
+
+    # Set the headers with your API key
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+
+    # Fetch and display current settings
+    print("Fetching current project settings...")
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        print("Current Settings:", response.json())
+    else:
+        print("Failed to fetch settings:", response.text)
+        return
+
+    # Ask user what settings they want to update
+    updates = {}
+    while True:
+        key = input("Enter the setting key to update (or type 'done' to finish): ")
+        if key.lower() == 'done':
+            break
+        if key:
+            value = input(f"Enter new value for {key}: ")
+            if key == "example_questions":
+                updates[key] = value.split(",")  # Assume input is comma-separated
+            else:
+                updates[key] = value
+
+    if not updates:
+        print("No updates made.")
+        return
+
+    # Convert the updates dictionary to JSON format
+    data = json.dumps(updates)
+
+    # Set additional headers for JSON content-type
+    update_headers = headers.copy()
+    update_headers["content-type"] = "application/json"
+
+    # Update the project settings
+    print("Updating project settings...")
+    update_response = requests.post(url, headers=update_headers, data=data)
+    if update_response.status_code == 200:
+        print("Update successful:", update_response.json())
+    else:
+        print("Failed to update settings:", update_response.text)
+
+# Run the update function
+update_settings()
+
+```
+
+Contents of projects/quota.py:
+```
+import requests
+
+def fetch_project_stats(api_key, project_id):
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/stats"
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    response = requests.get(url, headers=headers)
+    return response.text
+
+def main():
+    api_key = input("Please enter your API key: ")
+    project_id = input("Please enter your project ID: ")
+    result = fetch_project_stats(api_key, project_id)
+    print("Response from API:")
+    print(result)
+
+if __name__ == "__main__":
+    main()
+
+```
+
+Contents of projects/source_deleter.py:
+```
+import requests
+import time
+
+def get_files(api_key, project_id):
+    """ Fetch all files listed in the uploads section of the given project. """
+    all_files = []
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/sources"
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        all_files.extend(data['data']['uploads']['pages'])  # Correct path to fetch files
+    else:
+        print(f"Failed to list files: {response.status_code}, {response.text}")
+    return all_files
+
+def delete_file(api_key, project_id, file_id):
+    """ Delete a specific page by page ID within a project. """
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/sources/{file_id}" 
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {api_key}"
+    }
+    response = requests.delete(url, headers=headers)
+    if response.status_code == 200:
+        print(f"Deleted page with ID {file_id} successfully.")
+    elif response.status_code == 429:
+        print(f"Failed to delete page with ID {file_id} due to rate limits. Retrying...")
+        time.sleep(10)  # Adjust the sleep time if necessary
+        delete_file(api_key, project_id, file_id)  # Retry deleting the same page
+    else:
+        print(f"Failed to delete file with ID {file_id}: {response.status_code}, {response.text}")
+
+def delete_files_containing_string(api_key, project_id, search_string):
+    """ Delete all files that contain a specified string in their filename. """
+    files = get_files(api_key, project_id)
+    for file in files:
+        if search_string.lower() in file['filename'].lower():
+            delete_file(api_key, project_id, file['id'])
+            time.sleep(1) # Sleep for 1 second between each deletion. Adjust as needed for subscription tier.
+            #Customer Tier Rate Limits:
+            #Basic: 60 per minute
+            #Standard: 90 per minute
+            #Premium: 120 per minute
+
+def main():
+    api_key = input('Enter your API key: ')
+    project_id = input("Enter the project ID: ")
+    search_string = input("Delete all pages containing the following string: ")
+    delete_files_containing_string(api_key, project_id, search_string)
+
+if __name__ == "__main__":
+    main()
+
+```
+
+Contents of projects/user_count.py:
+```
+import requests
+
+def fetch_traffic_report(api_key, project_id):
+    url = f"https://app.customgpt.ai/api/v1/projects/{project_id}/reports/traffic"
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    response = requests.get(url, headers=headers)
+    return response.text
+
+def main():
+    api_key = input("Please enter your API key: ")
+    project_id = input("Please enter your project ID: ")
+    result = fetch_traffic_report(api_key, project_id)
+    print("Response from API:")
+    print(result)
+
+if __name__ == "__main__":
+    main()
+```
+
+Contents of testing scripts/harness.py:
+```
+import requests
+import json
+from sseclient import SSEClient
+import re
+
+def calculate_similarity(question, answer):
+    # Normalize and split the strings to compare
+    question_words = set(re.findall(r'\w+', question.lower()))
+    answer_words = set(re.findall(r'\w+', answer.lower()))
+    common_words = question_words.intersection(answer_words)
+    return len(common_words), common_words
+
+def main():
+    # Setup API URL and API Token
+    api_endpoint = 'https://app.customgpt.ai/api/v1/'
+    api_token = input('Please enter your API token: ')
+    project_id = input('Please enter the project ID: ')
+
+    headers = {
+        'Content-type': 'application/json',
+        'Authorization': 'Bearer ' + api_token,
+        'Accept': 'text/event-stream'
+    }
+
+    # Fetch project info
+    url = f"{api_endpoint}projects/{project_id}"
+    response = requests.get(url, headers={"Authorization": f"Bearer {api_token}", "accept": "application/json"})
+    print("Project Information Response:")
+    print(response.text)
+
+    # Create a conversation
+    name = input("Enter a name for the conversation: ")
+    payload = json.dumps({
+        "name": name
+    })
+
+    url = f"{api_endpoint}projects/{project_id}/conversations"
+    response = requests.post(url, headers=headers, data=payload)
+    print("Conversation Creation Response:")
+    print(response.text)
+    conversation_data = json.loads(response.text)["data"]
+    session_id = conversation_data["session_id"]
+
+    # Engage in a continuous conversation
+    while True:
+        questions_input = input("Enter your list of questions separated by a comma ',' (or type 'exit' to end): ")
+        if questions_input.lower() == 'exit':
+            print("Exiting conversation.")
+            break
+        
+        questions = questions_input.split(',')
+        for question in questions:
+            question = question.strip()
+            payload = json.dumps({
+                "prompt": question,
+                "stream": 1
+            })
+
+            url = f"{api_endpoint}projects/{project_id}/conversations/{session_id}/messages"
+            stream_response = requests.post(url, headers=headers, data=payload, stream=True)
+            client = SSEClient(stream_response)
+            print(f"Question: {question}")
+            answer = ""
+            for event in client.events():
+                data = json.loads(event.data)
+                print(data.get("message", ""))
+                answer += data.get("message", "")
+                if data.get("status") == "finish":
+                    client.close()
+                    break
+            
+            similarity_score, common_words = calculate_similarity(question, answer)
+            print(f"Answer: {answer}")
+            print(f"Similarity score (count of common words): {similarity_score}")
+            print(f"Common words: {common_words}")
+
+if __name__ == "__main__":
+    main()
+
+```
+
+Contents of testing scripts/test_endpoints.py:
+```
+import pytest
+import requests
+
+# Constants for API
+BASE_URL = "https://app.customgpt.ai/api/v1/projects"
+API_TOKEN = "" #Input your API token here
+project = "" #Input a projectID
+session = "" #Input a sessionID
+
+
+# Headers template
+headers = {
+    "Authorization": f"Bearer {API_TOKEN}",
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+}
+
+# Tests for GET endpoint
+def test_get_project_details():
+    project_id = project  # Can Replace with your actual project ID
+    response = requests.get(f"{BASE_URL}/{project_id}?width=100%25&height=auto", headers=headers)
+    assert response.status_code == 200
+    assert "data" in response.json(), "Response should contain 'data' key"
+    assert response.json()['status'] == 'success', "API call did not succeed"
+
+# Tests for POST endpoint to create conversations
+def test_create_conversation():
+    project_id = project  # Can Replace with your actual project ID
+    payload = {"name": "test_conversation"}
+    response = requests.post(f"{BASE_URL}/{project_id}/conversations", json=payload, headers=headers)
+    session = response.json()['data']['session_id']
+    assert response.status_code == 201
+    assert "id" in response.json()['data'], "Response should contain 'id' of the conversation"
+
+# Tests for POST endpoint to send messages
+def test_send_message():
+    project_id = project
+    session_id = session
+    payload = {"response_source": "default", "prompt": "hello"}
+    response = requests.post(f"{BASE_URL}/{project_id}/conversations/{session_id}/messages?stream=false&lang=en", json=payload, headers=headers)
+    assert response.status_code == 200, f"Failed with status {response.status_code}: {response.json()}"
+    assert "data" in response.json(), "Response should contain 'data' key"
+    assert "id" in response.json()['data'], "Response should contain 'id' in 'data'"
+    assert response.json()['status'] == 'success', "API call did not succeed"
+
+# Running the tests
+if __name__ == "__main__":
+    pytest.main()
+
+```
+
